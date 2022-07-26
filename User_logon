@@ -1,0 +1,35 @@
+Reference part of function taken from - https://cloudbrothers.info/en/unified-sign-logs-advanced-hunting/
+
+let User_Signin_Logs = (User: string) {
+    union SigninLogs, AADNonInteractiveUserSignInLogs
+    // Rename all columns named _dynamic to normalize the column names
+    | extend ConditionalAccessPolicies = iff(isempty(ConditionalAccessPolicies_dynamic), todynamic(ConditionalAccessPolicies_string), ConditionalAccessPolicies_dynamic)
+    | extend Status = iff(isempty(Status_dynamic), todynamic(Status_string), Status_dynamic)
+    | extend MfaDetail = iff(isempty(MfaDetail_dynamic), todynamic(MfaDetail_string), MfaDetail_dynamic)
+    | extend DeviceDetail = iff(isempty(DeviceDetail_dynamic), todynamic(DeviceDetail_string), DeviceDetail_dynamic)
+    | extend LocationDetails = iff(isempty(LocationDetails_dynamic), todynamic(LocationDetails_string), LocationDetails_dynamic)
+    | extend browser_ = tostring(DeviceDetail.browser)
+    | extend deviceId_ = tostring(DeviceDetail.deviceId)
+    | extend displayName_ = tostring(DeviceDetail.displayName)
+    | extend isCompliant_ = tostring(DeviceDetail.isCompliant)
+    | where UserPrincipalName =~ User
+    // Remove duplicated columns
+    | project-away *_dynamic
+    | project 
+        TimeGenerated,
+        OperationName,
+        ResultType,
+        ResultDescription,
+        Identity,
+        IPAddress,
+        UserAgent,
+        Location,
+        ClientAppUsed,
+        ConditionalAccessStatus,
+        IsInteractive,
+        IsRisky,
+        deviceId_,
+        displayName_,
+        isCompliant_
+    | sort by TimeGenerated desc
+};
